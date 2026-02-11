@@ -1,0 +1,5 @@
+{
+  "name": "SPIKE Prime FLL Simulator",
+  "description": "A web-based 3D simulator for FLL robotics using Blockly, Three.js, and Rapier physics.",
+  "requestFramePermissions": []
+}
