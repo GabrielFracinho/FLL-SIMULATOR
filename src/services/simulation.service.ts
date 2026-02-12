@@ -111,7 +111,7 @@ export class SimulationService {
     this.controls.maxDistance = 6;
     this.controls.zoomSpeed = 0.5;
     this.controls.maxPolarAngle = Math.PI / 2.1;
-    this.controls.target.set(SimConfig.fllTable.matWidth / 2, 0, SimConfig.fllTable.matLength / 2);
+    this.controls.target.set(1.22 / 2, 0, 2.44 / 2);
 
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
     this.scene.add(ambientLight);
@@ -134,50 +134,79 @@ export class SimulationService {
   private createFllTable() {
     const { matWidth, matLength, tableColor, borderHeight, borderThickness, borderColor } = SimConfig.fllTable;
 
+    // Official FLL dimensions: 1.22m x 2.44m (exact 2:1 ratio)
+    const MAT_W = 1.22;  // X axis (width)
+    const MAT_L = 2.44;  // Z axis (length)
+
     const tableGroup = new THREE.Group();
     const tableBody = this.world.createRigidBody(this.RAPIER.RigidBodyDesc.fixed());
 
-    // 1. Create Mat
-    const matGeo = new THREE.PlaneGeometry(matWidth, matLength);
+    // 1. White table base (slightly larger than mat to support borders)
+    const tableBaseGeo = new THREE.PlaneGeometry(MAT_W + borderThickness * 2, MAT_L + borderThickness * 2);
+    const tableBaseMaterial = new THREE.MeshStandardMaterial({
+        color: tableColor,
+        roughness: 0.5,
+        metalness: 0.0
+    });
+    const tableBaseMesh = new THREE.Mesh(tableBaseGeo, tableBaseMaterial);
+    tableBaseMesh.rotation.x = -Math.PI / 2;
+    tableBaseMesh.position.set(MAT_W / 2, -0.001, MAT_L / 2);
+    tableBaseMesh.receiveShadow = true;
+    tableGroup.add(tableBaseMesh);
+
+    // 2. Mat with official texture (exactly 1.22 x 2.44, no scale)
+    const matGeo = new THREE.PlaneGeometry(MAT_W, MAT_L);
     const textureLoader = new THREE.TextureLoader();
-    const matTexture = textureLoader.load('https://i.imgur.com/83sL5eI.png', (texture) => {
+
+    // Use crossOrigin anonymous for CORS
+    textureLoader.crossOrigin = 'anonymous';
+
+    const matTexture = textureLoader.load('https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-EiIGFHx2tR1KnkGWVycF4xQm1TYs8d.png', (texture) => {
         texture.colorSpace = THREE.SRGBColorSpace;
         texture.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
-        
-        // Use ClampToEdgeWrapping to prevent texture repeating at the borders.
         texture.wrapS = THREE.ClampToEdgeWrapping;
         texture.wrapT = THREE.ClampToEdgeWrapping;
-
-        // Ensure the texture is applied 1:1 without any repeating or offsetting.
         texture.repeat.set(1, 1);
         texture.offset.set(0, 0);
+
+        // Rotate texture 90 degrees CCW so the wide image maps onto the long Z axis.
+        // After rotation the pivot must sit at the centre of the UV square.
+        texture.center.set(0.5, 0.5);
+        texture.rotation = Math.PI / 2;
+
+        texture.needsUpdate = true;
     });
 
-    const matMaterial = new THREE.MeshStandardMaterial({ 
-        map: matTexture, 
-        color: 0xffffff, 
-        roughness: 0.8, 
-        metalness: 0.1 
+    const matMaterial = new THREE.MeshStandardMaterial({
+        map: matTexture,
+        color: 0xffffff,
+        roughness: 0.8,
+        metalness: 0.1
     });
     const matMesh = new THREE.Mesh(matGeo, matMaterial);
     matMesh.rotation.x = -Math.PI / 2;
-    matMesh.position.set(matWidth / 2, 0, matLength / 2);
+    // Origin (0,0) at bottom-left corner of mat. Position center at (W/2, 0.001, L/2).
+    matMesh.position.set(MAT_W / 2, 0.001, MAT_L / 2);
     matMesh.receiveShadow = true;
     tableGroup.add(matMesh);
 
-    // Physics collider for the mat/table surface
-    const floorColliderDesc = this.RAPIER.ColliderDesc.cuboid(matWidth / 2, 0.01, matLength / 2)
-        .setTranslation(matWidth / 2, -0.01, matLength / 2);
+    // 3. Physics collider for the table surface
+    const floorColliderDesc = this.RAPIER.ColliderDesc.cuboid(MAT_W / 2, 0.01, MAT_L / 2)
+        .setTranslation(MAT_W / 2, -0.01, MAT_L / 2);
     this.world.createCollider(floorColliderDesc, tableBody);
 
-    // 2. Create Walls
+    // 4. Border walls (outside the usable mat area)
     const wallMaterial = new THREE.MeshStandardMaterial({ color: borderColor, roughness: 0.7 });
     const wallPositions: [number, number, number, number, number, number][] = [
-      // x, y, z, width, height, depth
-      [matWidth / 2, borderHeight / 2, -borderThickness / 2, matWidth + borderThickness * 2, borderHeight, borderThickness], // Bottom wall (-Z)
-      [matWidth / 2, borderHeight / 2, matLength + borderThickness / 2, matWidth + borderThickness * 2, borderHeight, borderThickness], // Top wall (+Z)
-      [-borderThickness / 2, borderHeight / 2, matLength / 2, borderThickness, borderHeight, matLength], // Left wall (-X)
-      [matWidth + borderThickness / 2, borderHeight / 2, matLength / 2, borderThickness, borderHeight, matLength], // Right wall (+X)
+      // [x, y, z, sizeX, sizeY, sizeZ]
+      // Bottom wall (-Z) - outside mat area
+      [MAT_W / 2, borderHeight / 2, -borderThickness / 2, MAT_W + borderThickness * 2, borderHeight, borderThickness],
+      // Top wall (+Z) - outside mat area
+      [MAT_W / 2, borderHeight / 2, MAT_L + borderThickness / 2, MAT_W + borderThickness * 2, borderHeight, borderThickness],
+      // Left wall (-X) - outside mat area
+      [-borderThickness / 2, borderHeight / 2, MAT_L / 2, borderThickness, borderHeight, MAT_L],
+      // Right wall (+X) - outside mat area
+      [MAT_W + borderThickness / 2, borderHeight / 2, MAT_L / 2, borderThickness, borderHeight, MAT_L],
     ];
 
     wallPositions.forEach(([px, py, pz, sx, sy, sz]) => {

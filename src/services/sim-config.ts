@@ -2,8 +2,8 @@ export const SimConfig = {
   // FLL Table Configuration according to official rules
   fllTable: {
     // Mat (usable area)
-    matWidth: 1.2192,  // 4 ft -> X axis
-    matLength: 2.4384, // 8 ft -> Z axis
+    matWidth: 1.22,  // Official FLL: 1.22m -> X axis
+    matLength: 2.44, // Official FLL: 2.44m -> Z axis (2:1 ratio)
     // Table base (slightly larger than mat)
     tableColor: 0xf1f5f9, // slate-100
     // Border walls (new standard)
