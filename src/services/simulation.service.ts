@@ -140,7 +140,7 @@ export class SimulationService {
     // 1. Create Mat
     const matGeo = new THREE.PlaneGeometry(matWidth, matLength);
     const textureLoader = new THREE.TextureLoader();
-    const matTexture = textureLoader.load('https://i.imgur.com/83sL5eI.png', (texture) => {
+    const matTexture = textureLoader.load('assets/fll-mat.png', (texture) => {
         texture.colorSpace = THREE.SRGBColorSpace;
         texture.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
         
