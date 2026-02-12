@@ -168,6 +168,12 @@ export class SimulationService {
         texture.wrapT = THREE.ClampToEdgeWrapping;
         texture.repeat.set(1, 1);
         texture.offset.set(0, 0);
+
+        // Rotate texture 90 degrees CCW so the wide image maps onto the long Z axis.
+        // After rotation the pivot must sit at the centre of the UV square.
+        texture.center.set(0.5, 0.5);
+        texture.rotation = Math.PI / 2;
+
         texture.needsUpdate = true;
     });
 
