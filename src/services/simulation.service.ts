@@ -169,14 +169,6 @@ export class SimulationService {
         texture.repeat.set(1, 1);
         texture.offset.set(0, 0);
         texture.needsUpdate = true;
-
-        // Verify bounding box dimensions
-        const box = new THREE.Box3().setFromObject(matMesh);
-        const size = new THREE.Vector3();
-        box.getSize(size);
-        console.log(`[FLL Table] Mat bounding box: ${size.x.toFixed(4)} x ${size.z.toFixed(4)} (expected 1.22 x 2.44)`);
-    }, undefined, (error) => {
-        console.error('[FLL Table] Failed to load mat texture:', error);
     });
 
     const matMaterial = new THREE.MeshStandardMaterial({
@@ -224,9 +216,6 @@ export class SimulationService {
     });
 
     this.scene.add(tableGroup);
-
-    console.log(`[FLL Table] Created: Mat ${MAT_W}x${MAT_L}m, Borders h=${borderHeight}m t=${borderThickness}m`);
-    console.log(`[FLL Table] Coordinate system: Origin (0,0) at bottom-left, X: 0->${MAT_W}, Z: 0->${MAT_L}`);
 }
 
 
